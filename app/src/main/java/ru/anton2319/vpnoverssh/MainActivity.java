@@ -101,6 +101,7 @@ public class MainActivity extends AppCompatActivity {
         EditText editRemoteProxy = findViewById(R.id.editRemoteProxy);
         
         if (editPayload != null) editPayload.setText(getSharedPreferences("vpn_settings", MODE_PRIVATE).getString("custom_payload", ""));
+        // FIXED: Loads data accurately from separate remote_proxy key instead of copying from payload preferences
         if (editRemoteProxy != null) editRemoteProxy.setText(getSharedPreferences("vpn_settings", MODE_PRIVATE).getString("remote_proxy", ""));
         
         connectButtonData.postValue(StatusInfo.getInstance().isActive() ? "disconnect" : "connect");
