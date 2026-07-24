@@ -27,8 +27,6 @@ import ru.anton2319.vpnoverssh.data.utils.SSHConnectionProfileManager;
 import ru.anton2319.vpnoverssh.services.SocksProxyService;
 import ru.anton2319.vpnoverssh.services.SshService;
 
-// MainActivity handles UI interaction for SSH/VPN connections, profile selection,
-// and payload configuration. Includes service lifecycle management.
 public class MainActivity extends AppCompatActivity {
     List<SSHConnectionProfile> sshConnectionProfileList;
     SSHConnectionProfile selectedProfile;
@@ -42,7 +40,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
-        // Initialize Intents and Views
         if(StatusInfo.getInstance().getVpnIntent() == null) StatusInfo.getInstance().setVpnIntent(new Intent(this, SocksProxyService.class));
         if(StatusInfo.getInstance().getSshIntent() == null) StatusInfo.getInstance().setSshIntent(new Intent(this, SshService.class));
         vpnIntent = StatusInfo.getInstance().getVpnIntent();
@@ -64,7 +61,6 @@ public class MainActivity extends AppCompatActivity {
             public void onNothingSelected(AdapterView<?> parent) {}
         });
 
-        // Setup Buttons
         findViewById(R.id.editProfileButton).setOnClickListener(v -> {
             if(selectedProfile != null && selectedProfile.uuid != null) {
                 Intent intent = new Intent(context, NewConnectionActivity.class);
@@ -78,7 +74,16 @@ public class MainActivity extends AppCompatActivity {
         connectButton.setOnClickListener(view -> {
             if(selectedProfile != null) {
                 EditText editPayload = findViewById(R.id.editPayload);
-                getSharedPreferences("vpn_settings", MODE_PRIVATE).edit().putString("custom_payload", editPayload != null ? editPayload.getText().toString() : "").apply();
+                EditText editRemoteProxy = findViewById(R.id.editRemoteProxy);
+                
+                String payloadText = editPayload != null ? editPayload.getText().toString() : "";
+                String proxyText = editRemoteProxy != null ? editRemoteProxy.getText().toString() : "";
+                
+                getSharedPreferences("vpn_settings", MODE_PRIVATE).edit()
+                    .putString("custom_payload", payloadText)
+                    .putString("remote_proxy", proxyText)
+                    .apply();
+                    
                 startVpn(selectedProfile.getUsername(), selectedProfile.getPassword(), selectedProfile.getPrivateKey(), selectedProfile.getServerIP(), selectedProfile.getServerPort());
             } else startActivity(new Intent(context, NewConnectionActivity.class));
         });
@@ -89,15 +94,18 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onResume() {
         super.onResume();
-        // Refresh profiles and payload
         SSHConnectionProfileAdapter adapter = new SSHConnectionProfileAdapter(this, new SSHConnectionProfileManager(this).loadProfiles());
         ((Spinner) findViewById(R.id.spinner)).setAdapter(adapter);
+        
         EditText editPayload = findViewById(R.id.editPayload);
+        EditText editRemoteProxy = findViewById(R.id.editRemoteProxy);
+        
         if (editPayload != null) editPayload.setText(getSharedPreferences("vpn_settings", MODE_PRIVATE).getString("custom_payload", ""));
+        if (editRemoteProxy != null) editRemoteProxy.setText(getSharedPreferences("vpn_settings", MODE_PRIVATE).getString("custom_payload", ""));
+        
         connectButtonData.postValue(StatusInfo.getInstance().isActive() ? "disconnect" : "connect");
     }
 
-    // Menu and Service Methods
     @Override
     public boolean onCreateOptionsMenu(Menu menu) { getMenuInflater().inflate(R.menu.menu_main, menu); return true; }
     @Override
@@ -118,7 +126,11 @@ public class MainActivity extends AppCompatActivity {
                 if (privateKey != null && !privateKey.isEmpty()) sshIntent.putExtra("privateKey", privateKey);
                 sshIntent.putExtra("hostname", hostname);
                 sshIntent.putExtra("port", String.valueOf(port > 0 ? port : 22));
+                
+                // Attach the payload and proxy from shared preferences to the SSH worker service
                 sshIntent.putExtra("payload", getSharedPreferences("vpn_settings", MODE_PRIVATE).getString("custom_payload", ""));
+                sshIntent.putExtra("remote_proxy", getSharedPreferences("vpn_settings", MODE_PRIVATE).getString("remote_proxy", ""));
+                
                 startService(sshIntent);
                 vpnIntent.putExtra("socksPort", 1080);
                 startService(vpnIntent);
