@@ -56,8 +56,8 @@ public class SshService extends Service {
         if (rawPayload != null && !rawPayload.trim().isEmpty() && remoteProxyString != null && remoteProxyString.contains(":")) {
             Log.d(TAG, "Parsing Remote Proxy and Executing Custom Payload Engine");
             
-            // Clean indexing fix: Extracts from elements inside the split index instead of array grouping reference
             String[] proxyParts = remoteProxyString.split(":");
+            // FIXED: Target specific element array index locations [0] and [1] before running .trim()
             String proxyHost = proxyParts[0].trim();
             int proxyPort = Integer.parseInt(proxyParts[1].trim());
 
