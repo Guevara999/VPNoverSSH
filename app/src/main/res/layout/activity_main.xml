@@ -1,60 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/ssh_connect_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="toggle"
-        android:paddingVertical="15dp"
-        android:paddingHorizontal="55dp"
-        app:cornerRadius="55dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintBottom_toTopOf="@+id/ssh_connect_button"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        android:padding="10dp">
-
-        <Spinner
-            android:id="@+id/spinner"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:padding="10dp"
-            />
-
-        <ImageButton
-            android:id="@+id/editProfileButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:padding="10dp"
-            android:background="@android:color/transparent"
-            app:tint="?colorPrimary"
-            android:contentDescription="Edit this profile"
-            app:srcCompat="@drawable/baseline_edit_24" />
-
-        <ImageButton
-            android:id="@+id/addProfileButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:padding="10dp"
-            android:background="@android:color/transparent"
-            app:tint="?colorPrimary"
-            android:contentDescription="Add new profile"
-            app:srcCompat="@drawable/baseline_add_24" />
-            <!-- Custom Payload Input Section -->
+    <!-- Custom Payload and Remote Proxy Input Section -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -78,8 +22,21 @@
             android:padding="8dp"
             android:inputType="textMultiLine"
             android:scrollbars="vertical" />
-    </LinearLayout>
 
-    </LinearLayout>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Remote Proxy (ip:port or host:port):"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:layout_marginTop="12dp" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <EditText
+            android:id="@+id/editRemoteProxy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="://oppo.com"
+            android:background="#EAEAEA"
+            android:padding="8dp"
+            android:inputType="textUri" />
+    </LinearLayout>
