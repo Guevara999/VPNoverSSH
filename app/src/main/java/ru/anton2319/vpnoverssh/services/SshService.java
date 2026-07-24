@@ -19,9 +19,6 @@ import java.util.Optional;
 import ru.anton2319.vpnoverssh.PayloadEngine;
 import ru.anton2319.vpnoverssh.data.singleton.PortForward;
 
-// SshService manages the background thread lifecycle for the SSH/VPN tunnel.
-// Uses Trilead SSH library coupled with PayloadEngine to route connection
-// packets securely via custom HTTP proxy payload strings.
 public class SshService extends Service {
 
     private static final String TAG = "SshService";
@@ -52,33 +49,37 @@ public class SshService extends Service {
         String password = intent.getStringExtra("password");
         int port = Integer.parseInt(Optional.of(intent.getStringExtra("port")).orElse(String.valueOf(22)));
         String privateKey = intent.getStringExtra("privateKey");
+        
         String rawPayload = intent.getStringExtra("payload");
+        String remoteProxyString = intent.getStringExtra("remote_proxy");
 
-        // If the user pasted a payload string, intercept connection logic using a local HTTP proxy handler
-        if (rawPayload != null && !rawPayload.trim().isEmpty()) {
-            Log.d(TAG, "Injecting Custom HTTP Payload Routing Engine");
+        // Verify if a manual payload and a target remote proxy are provided
+        if (rawPayload != null && !rawPayload.trim().isEmpty() && remoteProxyString != null && remoteProxyString.contains(":")) {
+            Log.d(TAG, "Parsing Remote Proxy and Executing Custom Payload Engine");
             
-            // Format parameters inside your custom string (e.g. [rotate], [crlf])
+            // Extract IP/Host and Port from the remote proxy field text box (e.g., ://oppo.com)
+            String[] proxyParts = remoteProxyString.split(":");
+            String proxyHost = proxyParts[0].trim();
+            int proxyPort = Integer.parseInt(proxyParts[1].trim());
+
+            // Build formatting variables like [rotate], [host], [port], and [crlf]
             String preparedPayload = PayloadEngine.formatPayloadString(rawPayload, host, String.valueOf(port));
 
-            // Spin up a raw background socket proxy loop right on the device
             try {
-                // Connect socket out over standard HTTP Proxy pipeline channels (Usually port 80 or 8080)
-                Socket payloadSocket = new Socket(host, port);
+                // Open network socket direct to the Remote Proxy instead of the direct SSH server address
+                Socket payloadSocket = new Socket(proxyHost, proxyPort);
                 
-                // Transmit raw double-flush packets if the payload string relies on [split] formatting
+                // Transmit payload chunk sequences, triggering double-flushes if [split] is specified
                 PayloadEngine.transmitPayload(payloadSocket, preparedPayload);
                 
-                // Force the Trilead connection framework to bind directly over this payload-modified stream
+                // Initialize the Trilead connection module mapping over the existing payload socket channel
                 conn = new Connection(host, port);
-                
-                // Use placeholder values here since your payloadSocket has already negotiated access upstream
-                conn.setProxyData(new HTTPProxyData("127.0.0.1", 8080)); 
+                conn.setProxyData(new HTTPProxyData(proxyHost, proxyPort)); 
             } catch (Exception e) {
-                throw new IOException("Payload transmission routing pipeline failed: " + e.getMessage());
+                throw new IOException("Remote Proxy Payload Injection Pipeline Failed: " + e.getMessage());
             }
         } else {
-            // Fallback connection loop for empty payloads (Direct connection method)
+            // Standard direct SSH protocol loop if fields are left blank
             conn = new Connection(host, port);
         }
 
