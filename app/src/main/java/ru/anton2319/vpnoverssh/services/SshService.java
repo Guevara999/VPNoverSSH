@@ -53,17 +53,26 @@ public class SshService extends Service {
         String rawPayload = intent.getStringExtra("payload");
         String remoteProxyString = intent.getStringExtra("remote_proxy");
 
+        // Safely evaluate whether the remote proxy configuration string is present
         if (rawPayload != null && !rawPayload.trim().isEmpty() && remoteProxyString != null && remoteProxyString.contains(":")) {
             Log.d(TAG, "Parsing Remote Proxy and Executing Custom Payload Engine");
             
-            String[] proxyParts = remoteProxyString.split(":");
-            // FIXED: Target specific element array index locations [0] and [1] before running .trim()
-            String proxyHost = proxyParts[0].trim();
-            int proxyPort = Integer.parseInt(proxyParts[1].trim());
-
-            String preparedPayload = PayloadEngine.formatPayloadString(rawPayload, host, String.valueOf(port));
+            String proxyHost = "";
+            int proxyPort = 8080;
 
             try {
+                // Safeguard parser loop to completely prevent array index boundary crashes
+                String[] proxyParts = remoteProxyString.split(":");
+                if (proxyParts.length >= 2) {
+                    proxyHost = proxyParts[0].trim();
+                    proxyPort = Integer.parseInt(proxyParts[1].trim());
+                } else {
+                    throw new IllegalArgumentException("Invalid Remote Proxy Format. Use host:port");
+                }
+
+                String preparedPayload = PayloadEngine.formatPayloadString(rawPayload, host, String.valueOf(port));
+
+                // Establish tunnel socket routing directly to the proxy destination server address
                 Socket payloadSocket = new Socket(proxyHost, proxyPort);
                 PayloadEngine.transmitPayload(payloadSocket, preparedPayload);
                 
@@ -73,6 +82,7 @@ public class SshService extends Service {
                 throw new IOException("Remote Proxy Payload Injection Pipeline Failed: " + e.getMessage());
             }
         } else {
+            // Direct protocol fallback if parameters are empty
             conn = new Connection(host, port);
         }
 
