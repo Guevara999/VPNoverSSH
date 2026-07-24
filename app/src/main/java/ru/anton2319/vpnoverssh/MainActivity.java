@@ -101,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
         EditText editRemoteProxy = findViewById(R.id.editRemoteProxy);
         
         if (editPayload != null) editPayload.setText(getSharedPreferences("vpn_settings", MODE_PRIVATE).getString("custom_payload", ""));
-        if (editRemoteProxy != null) editRemoteProxy.setText(getSharedPreferences("vpn_settings", MODE_PRIVATE).getString("custom_payload", ""));
+        if (editRemoteProxy != null) editRemoteProxy.setText(getSharedPreferences("vpn_settings", MODE_PRIVATE).getString("remote_proxy", ""));
         
         connectButtonData.postValue(StatusInfo.getInstance().isActive() ? "disconnect" : "connect");
     }
@@ -127,7 +127,6 @@ public class MainActivity extends AppCompatActivity {
                 sshIntent.putExtra("hostname", hostname);
                 sshIntent.putExtra("port", String.valueOf(port > 0 ? port : 22));
                 
-                // Attach the payload and proxy from shared preferences to the SSH worker service
                 sshIntent.putExtra("payload", getSharedPreferences("vpn_settings", MODE_PRIVATE).getString("custom_payload", ""));
                 sshIntent.putExtra("remote_proxy", getSharedPreferences("vpn_settings", MODE_PRIVATE).getString("remote_proxy", ""));
                 
