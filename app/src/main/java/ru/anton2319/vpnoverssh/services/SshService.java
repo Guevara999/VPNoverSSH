@@ -53,40 +53,32 @@ public class SshService extends Service {
         String rawPayload = intent.getStringExtra("payload");
         String remoteProxyString = intent.getStringExtra("remote_proxy");
 
-        // Verify if a manual payload and a target remote proxy are provided
         if (rawPayload != null && !rawPayload.trim().isEmpty() && remoteProxyString != null && remoteProxyString.contains(":")) {
             Log.d(TAG, "Parsing Remote Proxy and Executing Custom Payload Engine");
             
-            // Extract IP/Host and Port from the remote proxy field text box (e.g., ://oppo.com)
+            // Clean indexing fix: Extracts from elements inside the split index instead of array grouping reference
             String[] proxyParts = remoteProxyString.split(":");
             String proxyHost = proxyParts[0].trim();
             int proxyPort = Integer.parseInt(proxyParts[1].trim());
 
-            // Build formatting variables like [rotate], [host], [port], and [crlf]
             String preparedPayload = PayloadEngine.formatPayloadString(rawPayload, host, String.valueOf(port));
 
             try {
-                // Open network socket direct to the Remote Proxy instead of the direct SSH server address
                 Socket payloadSocket = new Socket(proxyHost, proxyPort);
-                
-                // Transmit payload chunk sequences, triggering double-flushes if [split] is specified
                 PayloadEngine.transmitPayload(payloadSocket, preparedPayload);
                 
-                // Initialize the Trilead connection module mapping over the existing payload socket channel
                 conn = new Connection(host, port);
                 conn.setProxyData(new HTTPProxyData(proxyHost, proxyPort)); 
             } catch (Exception e) {
                 throw new IOException("Remote Proxy Payload Injection Pipeline Failed: " + e.getMessage());
             }
         } else {
-            // Standard direct SSH protocol loop if fields are left blank
             conn = new Connection(host, port);
         }
 
         conn.connect();
         PortForward.getInstance().setConn(conn);
 
-        // Authenticate with the SSH server
         int attempts = 1;
         boolean isAuthenticated = false;
 
