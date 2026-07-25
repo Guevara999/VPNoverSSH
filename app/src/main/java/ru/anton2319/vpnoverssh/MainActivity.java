@@ -11,10 +11,10 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageButton;
 import android.widget.Spinner;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.MutableLiveData;
 
 import java.util.List;
@@ -39,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        
+
         if(StatusInfo.getInstance().getVpnIntent() == null) StatusInfo.getInstance().setVpnIntent(new Intent(this, SocksProxyService.class));
         if(StatusInfo.getInstance().getSshIntent() == null) StatusInfo.getInstance().setSshIntent(new Intent(this, SshService.class));
         vpnIntent = StatusInfo.getInstance().getVpnIntent();
@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
         SSHConnectionProfileManager sshConnectionProfileManager = new SSHConnectionProfileManager(this);
         sshConnectionProfileList = sshConnectionProfileManager.loadProfiles();
         SSHConnectionProfileAdapter adapter = new SSHConnectionProfileAdapter(this, sshConnectionProfileList);
-        
+
         Spinner spinner = findViewById(R.id.spinner);
         spinner.setAdapter(adapter);
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -69,21 +69,21 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         findViewById(R.id.addProfileButton).setOnClickListener(v -> startActivity(new Intent(context, NewConnectionActivity.class)));
-        
+
         Button connectButton = findViewById(R.id.ssh_connect_button);
         connectButton.setOnClickListener(view -> {
             if(selectedProfile != null) {
                 EditText editPayload = findViewById(R.id.editPayload);
                 EditText editRemoteProxy = findViewById(R.id.editRemoteProxy);
-                
+
                 String payloadText = editPayload != null ? editPayload.getText().toString() : "";
                 String proxyText = editRemoteProxy != null ? editRemoteProxy.getText().toString() : "";
-                
+
                 getSharedPreferences("vpn_settings", MODE_PRIVATE).edit()
                     .putString("custom_payload", payloadText)
                     .putString("remote_proxy", proxyText)
                     .apply();
-                    
+
                 startVpn(selectedProfile.getUsername(), selectedProfile.getPassword(), selectedProfile.getPrivateKey(), selectedProfile.getServerIP(), selectedProfile.getServerPort());
             } else startActivity(new Intent(context, NewConnectionActivity.class));
         });
@@ -96,14 +96,13 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         SSHConnectionProfileAdapter adapter = new SSHConnectionProfileAdapter(this, new SSHConnectionProfileManager(this).loadProfiles());
         ((Spinner) findViewById(R.id.spinner)).setAdapter(adapter);
-        
+
         EditText editPayload = findViewById(R.id.editPayload);
         EditText editRemoteProxy = findViewById(R.id.editRemoteProxy);
-        
+
         if (editPayload != null) editPayload.setText(getSharedPreferences("vpn_settings", MODE_PRIVATE).getString("custom_payload", ""));
-        // FIXED: Loads data accurately from separate remote_proxy key instead of copying from payload preferences
         if (editRemoteProxy != null) editRemoteProxy.setText(getSharedPreferences("vpn_settings", MODE_PRIVATE).getString("remote_proxy", ""));
-        
+
         connectButtonData.postValue(StatusInfo.getInstance().isActive() ? "disconnect" : "connect");
     }
 
@@ -127,19 +126,25 @@ public class MainActivity extends AppCompatActivity {
                 if (privateKey != null && !privateKey.isEmpty()) sshIntent.putExtra("privateKey", privateKey);
                 sshIntent.putExtra("hostname", hostname);
                 sshIntent.putExtra("port", String.valueOf(port > 0 ? port : 22));
-                
+
                 sshIntent.putExtra("payload", getSharedPreferences("vpn_settings", MODE_PRIVATE).getString("custom_payload", ""));
                 sshIntent.putExtra("remote_proxy", getSharedPreferences("vpn_settings", MODE_PRIVATE).getString("remote_proxy", ""));
-                
-                startService(sshIntent);
+
+                // Use startForegroundService for a long-running background service (Android O+)
+                ContextCompat.startForegroundService(this, sshIntent);
+
                 vpnIntent.putExtra("socksPort", 1080);
                 startService(vpnIntent);
-            } catch (Exception e) { StatusInfo.getInstance().setActive(false); e.printStackTrace(); }
+            } catch (Exception e) {
+                StatusInfo.getInstance().setActive(false);
+                e.printStackTrace();
+            }
         } else {
             StatusInfo.getInstance().setActive(false);
             connectButtonData.postValue("connect");
             if(SocksPersistent.getInstance().getVpnThread() != null) SocksPersistent.getInstance().getVpnThread().interrupt();
             stopService(sshIntent);
+            stopService(vpnIntent);
         }
     }
 }
